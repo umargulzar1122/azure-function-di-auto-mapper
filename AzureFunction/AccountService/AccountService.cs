@@ -17,8 +17,9 @@ namespace HellowWord.AccountService
         {
             try
             {
-                var account = _mapper.Map<Account>(accountDTO);
-                var data = await _service.CreateAndReturnAsync(account);
+                var account1 = _mapper.Map<Account>(accountDTO); 
+                account1.Attributes.Remove("accountid");
+                var data = await _service.CreateAndReturnAsync(account1);
                 return _mapper.Map<AccountDTO>(data);
             }
             catch (Exception ex)
@@ -27,9 +28,7 @@ namespace HellowWord.AccountService
                 return new AccountDTO();
             }
 
-        }
-
-       
+        }       
 
         public List<AccountDTO> GetAccounts(IValidationContainer validationContainer)
         {
@@ -40,7 +39,8 @@ namespace HellowWord.AccountService
                 {
                     Name = s.Name,
                     Address1_Line1 = s.Address1_Line1,
-                    PrimaryContactId = s.PrimaryContactId
+                    PrimaryContactId = s.PrimaryContactId,
+                    AccountId = s.AccountId
                 })
                     .ToList();
                 return _mapper.Map<List<AccountDTO>>(accounts);
@@ -53,18 +53,20 @@ namespace HellowWord.AccountService
 
         }
 
-        public async Task<AccountDTO> UpdateAccount(AccountDTO accountDTO, IValidationContainer validationContainer)
+        public async Task UpdateAccount(AccountDTO accountDTO, IValidationContainer validationContainer)
         {
             try
             {
-                var account = _mapper.Map<Account>(accountDTO);
-                await _service.UpdateAsync(account);
-                return accountDTO;
+                //var account = _mapper.Map<Account>(accountDTO);
+                var account = new Account();
+                account.Name = $"Test {DateTime.Now}";
+                account.AccountId = Guid.Parse(accountDTO.AccountId);
+                 await _service.UpdateAsync(account);
+                validationContainer.AddMessage(Enum.MessageTypeEnum.Success, $"Account with Id {accountDTO.AccountId} is successfully updated");
             }
             catch (Exception ex)
             {
-                validationContainer.AddMessage(Enum.MessageTypeEnum.Error, ex.Message);
-                return new AccountDTO();
+                validationContainer.AddMessage(Enum.MessageTypeEnum.Error, ex.Message);                 
             }
         }
         public async Task<string> DeleteAccount(AccountDTO accountDTO, IValidationContainer validationContainer)

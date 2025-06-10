@@ -1,3 +1,4 @@
+using FluentValidation;
 using HellowWord.AccountService;
 using HellowWord.DTO;
 using HellowWord.Validation;
@@ -5,7 +6,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
 
 namespace AzureFunction;
 
@@ -14,12 +18,14 @@ public class Dataverse
     private readonly ILogger<Dataverse> _logger;
     private readonly IAccountService _accountService;
     private readonly IValidationContainer _validationContainer;
+    private readonly IValidator<AccountDTO> _accountValidator;
 
-    public Dataverse(IAccountService accountService, ILogger<Dataverse> logger, IValidationContainer validationContainer)
+    public Dataverse(IAccountService accountService, IValidator<AccountDTO> accountValidator, ILogger<Dataverse> logger, IValidationContainer validationContainer)
     {
         _logger = logger;
         _accountService = accountService;
         _validationContainer = validationContainer;
+        _accountValidator = accountValidator;
     }
 
     [Function("GetAccounts")]
@@ -35,15 +41,21 @@ public class Dataverse
     }
 
     [Function("CreateAccount")]
-    public async Task<IActionResult> CreateAccount([HttpTrigger(AuthorizationLevel.Function,  "post")] HttpRequest req)
+    public async Task<IActionResult> CreateAccount([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequest req)
     {
         _logger.LogInformation("C# HTTP trigger function processed a request.");
         string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
 
-        var accountDTO = JsonSerializer.Deserialize<AccountDTO>(requestBody, new JsonSerializerOptions
+        var accountDTO = Newtonsoft.Json.JsonConvert.DeserializeObject<AccountDTO>(requestBody, new JsonSerializerSettings
         {
-            PropertyNameCaseInsensitive = false
+            NullValueHandling = NullValueHandling.Ignore,
+            DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate
         });
+        var validationResult = await _accountValidator.ValidateAsync(accountDTO);
+        if (validationResult.IsValid == false)
+        {
+            return new BadRequestObjectResult(validationResult.Errors);
+        }
         var result = await _accountService.CreateAccount(accountDTO, _validationContainer);
         if (_validationContainer.IsError)
         {
@@ -59,17 +71,17 @@ public class Dataverse
         _logger.LogInformation("C# HTTP trigger function processed a request.");
         string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
 
-        var accountDTO = JsonSerializer.Deserialize<AccountDTO>(requestBody, new JsonSerializerOptions
+        var accountDTO = Newtonsoft.Json.JsonConvert.DeserializeObject<AccountDTO>(requestBody, new JsonSerializerSettings
         {
-            PropertyNameCaseInsensitive = false
+            NullValueHandling = NullValueHandling.Ignore,
         });
-        var result = await _accountService.UpdateAccount(accountDTO, _validationContainer);
+        await _accountService.UpdateAccount(accountDTO, _validationContainer);
         if (_validationContainer.IsError)
         {
             return new BadRequestObjectResult(_validationContainer);
         }
 
-        return new OkObjectResult(result);
+        return new OkObjectResult(_validationContainer);
     }
 
     [Function("DeleteAccount")]
@@ -78,9 +90,9 @@ public class Dataverse
         _logger.LogInformation("C# HTTP trigger function processed a request.");
         string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
 
-        var accountDTO = JsonSerializer.Deserialize<AccountDTO>(requestBody, new JsonSerializerOptions
+        var accountDTO = Newtonsoft.Json.JsonConvert.DeserializeObject<AccountDTO>(requestBody, new JsonSerializerSettings
         {
-            PropertyNameCaseInsensitive = false
+            NullValueHandling = NullValueHandling.Ignore,
         });
         var result = await _accountService.DeleteAccount(accountDTO, _validationContainer);
         if (_validationContainer.IsError)

@@ -18,7 +18,8 @@ namespace HellowWord.Mapper
             {
                 EntityLogicalName = src.PrimaryContactId.LogicalName,
                 ID = src.PrimaryContactId.Id,
-                Name = src.PrimaryContactId.Name
+                Name = src.PrimaryContactId.Name,
+
             }));
             CreateMap<AccountDTO, Account>().ForMember(s => s.PrimaryContactId,
                 opt =>

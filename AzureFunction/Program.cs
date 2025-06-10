@@ -7,6 +7,11 @@ using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
 using HellowWord.AccountService;
 using HellowWord.Validation;
+using FluentValidation;
+using Microsoft.AspNetCore.Identity;
+using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
+using HellowWord.DTO;
+using AzureFunction.Validator.Account;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 
@@ -47,6 +52,7 @@ builder.Services.AddSingleton(mapperConfig);
 builder.Services.AddSingleton<IMapper>(provider => new Mapper(mapperConfig));
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IValidationContainer, ValidationContainer>();
+builder.Services.AddScoped<IValidator<AccountDTO>, AccountValidator>();
 
 builder.Build().Run();
 
